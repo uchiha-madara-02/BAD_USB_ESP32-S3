@@ -7,71 +7,105 @@
     body {
       font-family: sans-serif;
       padding: 2rem;
-      background: #f8f8f8;
+      background: #f9f9f9;
+      color: #333;
     }
-    button {
+    h1 {
+      color: #0066cc;
+    }
+    button, select {
       font-size: 1rem;
       padding: 10px 20px;
-      margin-top: 10px;
+      margin: 10px 5px 10px 0;
+      cursor: pointer;
     }
-    select {
-      font-size: 1rem;
-      padding: 5px;
+    #log {
+      white-space: pre-line;
+      background: #eee;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.95rem;
     }
   </style>
 </head>
 <body>
-  <h1>Flash ESP32 từ Web</h1>
+  <h1>🔌 ESP32 Web Flasher</h1>
 
   <label for="version">Chọn phiên bản firmware:</label>
   <select id="version">
     <option value="v1">Firmware v1</option>
-    <!-- bạn có thể thêm v2, v3 nếu có -->
-  </select><br />
+    <!-- thêm v2, v3 nếu có -->
+  </select><br>
 
-  <button id="flashBtn">🔌 Kết nối & Flash ESP32</button>
+  <button id="connectBtn">🔗 Chọn cổng</button>
+  <button id="flashBtn" disabled>⚡ Nạp firmware</button>
 
-  <p id="log"></p>
+  <p id="log">💬 Log sẽ hiển thị tại đây...</p>
 
   <!-- Load esptool.js -->
   <script src="https://unpkg.com/esptooljs@0.8.1/dist/web/index.umd.js"></script>
   <script>
+    let port;
+    let esptool;
+
     const log = (msg) => {
-      document.getElementById('log').innerText += msg + '\n';
+      const logEl = document.getElementById('log');
+      logEl.innerText += msg + '\n';
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    document.getElementById('connectBtn').onclick = async () => {
+      try {
+        log('🔍 Yêu cầu cổng Serial...');
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+        esptool = new EsptoolJS.Esptool(port);
+        esptool.setLogger(log);
+
+        log('🔌 Kết nối ESP32...');
+        await esptool.connect();
+        await esptool.runStub();
+
+        log('✅ Đã kết nối ESP32.');
+        document.getElementById('flashBtn').disabled = false;
+      } catch (err) {
+        log('❌ Lỗi kết nối: ' + err);
+      }
     };
 
     document.getElementById('flashBtn').onclick = async () => {
       const version = document.getElementById('version').value;
       const baseUrl = `firmware/${version}/`;
       const manifestUrl = `${baseUrl}manifest.json`;
+      const flashBtn = document.getElementById('flashBtn');
+      flashBtn.disabled = true;
 
-      log('Tải manifest...');
-      const manifest = await fetch(manifestUrl).then(res => res.json());
+      try {
+        log('📦 Tải manifest...');
+        const manifest = await fetch(manifestUrl).then(res => res.json());
 
-      log('Yêu cầu cổng Serial...');
-      const port = await navigator.serial.requestPort();
-      await port.open({ baudRate: 115200 });
+        for (const file of manifest.files) {
+          const url = baseUrl + file.path;
+          const offset = parseInt(file.offset);
 
-      const esptool = new EsptoolJS.Esptool(port);
-      esptool.setLogger(log);
+          log(`📥 Tải ${file.path}...`);
+          const bin = new Uint8Array(await (await fetch(url)).arrayBuffer());
 
-      log('Kết nối ESP32...');
-      await esptool.connect();
-      await esptool.runStub();
+          log(`🔥 Nạp ${file.path} tại địa chỉ 0x${offset.toString(16)}...`);
+          await esptool.flashData(bin, offset);
+        }
 
-      for (const file of manifest.files) {
-        const url = baseUrl + file.path;
-        const offset = parseInt(file.offset);
-
-        log(`Tải ${file.path}...`);
-        const bin = new Uint8Array(await (await fetch(url)).arrayBuffer());
-
-        log(`Nạp ${file.path} tại địa chỉ ${file.offset}...`);
-        await esptool.flashData(bin, offset);
+        await esptool.flashFinish(true);
+        log('🎉 Nạp thành công!');
+      } catch (err) {
+        log('❌ Lỗi trong quá trình nạp: ' + err);
+      } finally {
+        flashBtn.disabled = false;
       }
-
-      await esptool.flashFinish(true);
-      log('✅ Nạp xong!');
     };
   </script>
 </body>
