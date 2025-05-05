@@ -38,7 +38,6 @@
   <label for="version">Chọn phiên bản firmware:</label>
   <select id="version">
     <option value="v1">Firmware v1</option>
-    <!-- thêm v2, v3 nếu có -->
   </select><br>
 
   <button id="connectBtn">🔗 Chọn cổng</button>
@@ -46,8 +45,8 @@
 
   <p id="log">💬 Log sẽ hiển thị tại đây...</p>
 
-  <!-- Load esptool.js -->
-  <script src="https://unpkg.com/esptooljs@0.8.1/dist/web/index.umd.js"></script>
+  <!-- Load esptool.js (ĐÚNG LINK) -->
+  <script src="https://unpkg.com/esptooljs@0.8.1/dist/web/esptool.umd.js"></script>
   <script>
     let port;
     let esptool;
@@ -63,7 +62,7 @@
         log('🔍 Yêu cầu cổng Serial...');
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
-        esptool = new EsptoolJS.Esptool(port);
+        esptool = new Esptool(port);
         esptool.setLogger(log);
 
         log('🔌 Kết nối ESP32...');
