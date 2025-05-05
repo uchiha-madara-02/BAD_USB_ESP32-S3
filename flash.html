@@ -1,36 +1,78 @@
 <!DOCTYPE html>
-<html>
-
-
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>ESP32 Web Flasher</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background: #f8f8f8;
+    }
+    button {
+      font-size: 1rem;
+      padding: 10px 20px;
+      margin-top: 10px;
+    }
+    select {
+      font-size: 1rem;
+      padding: 5px;
+    }
+  </style>
+</head>
 <body>
-    <h1>Sample project for demoing ESP Web Tools</h1>
+  <h1>Flash ESP32 từ Web</h1>
 
-    <div id="main" style="display: none;">
+  <label for="version">Chọn phiên bản firmware:</label>
+  <select id="version">
+    <option value="v1">Firmware v1</option>
+    <!-- bạn có thể thêm v2, v3 nếu có -->
+  </select><br />
 
-        <br>
-        <script
-            type="module"
-            src="https://unpkg.com/esp-web-tools@7.3.1/dist/web/install-button.js?module">
-        </script>
-        <esp-web-install-button id="installButton" manifest="webflash/manifest.json"></esp-web-install-button>
-        <br>
-        <span>NOTE: Make sure to close anything using your devices com port (e.g. Serial monitor)</span>
-    </div>
-    <div id="notSupported" style="display: none;">
-        Your browser does not support the Web Serial API. Try Chrome
-    </div>
-    
+  <button id="flashBtn">🔌 Kết nối & Flash ESP32</button>
 
-    <script>
-        if(navigator.serial){
-            document.getElementById("notSupported").style.display = 'none';
-            document.getElementById("main").style.display = 'block';
-        } else {
-            document.getElementById("notSupported").style.display = 'block';
-            document.getElementById("main").style.display = 'none';
-        }
-    </script>
+  <p id="log"></p>
 
+  <!-- Load esptool.js -->
+  <script src="https://unpkg.com/esptooljs@0.8.1/dist/web/index.umd.js"></script>
+  <script>
+    const log = (msg) => {
+      document.getElementById('log').innerText += msg + '\n';
+    };
+
+    document.getElementById('flashBtn').onclick = async () => {
+      const version = document.getElementById('version').value;
+      const baseUrl = `firmware/${version}/`;
+      const manifestUrl = `${baseUrl}manifest.json`;
+
+      log('Tải manifest...');
+      const manifest = await fetch(manifestUrl).then(res => res.json());
+
+      log('Yêu cầu cổng Serial...');
+      const port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+
+      const esptool = new EsptoolJS.Esptool(port);
+      esptool.setLogger(log);
+
+      log('Kết nối ESP32...');
+      await esptool.connect();
+      await esptool.runStub();
+
+      for (const file of manifest.files) {
+        const url = baseUrl + file.path;
+        const offset = parseInt(file.offset);
+
+        log(`Tải ${file.path}...`);
+        const bin = new Uint8Array(await (await fetch(url)).arrayBuffer());
+
+        log(`Nạp ${file.path} tại địa chỉ ${file.offset}...`);
+        await esptool.flashData(bin, offset);
+      }
+
+      await esptool.flashFinish(true);
+      log('✅ Nạp xong!');
+    };
+  </script>
 </body>
-
 </html>
