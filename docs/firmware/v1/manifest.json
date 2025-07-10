@@ -1,8 +1,0 @@
-{
-  "version": "v1",
-  "files": [
-    { "path": "badusb2.ino.bootloader.bin", "offset": "0x1000" },
-    { "path": "badusb2.ino.bootloader.bin", "offset": "0x8000" },
-    { "path": "badusbs3.bin",   "offset": "0x10000" }
-  ]
-}
