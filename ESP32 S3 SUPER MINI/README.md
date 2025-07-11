@@ -1,0 +1,5 @@
+# SD CARD
+- CS 10
+- MOSI 11
+- CLK 12
+- MISO 13
