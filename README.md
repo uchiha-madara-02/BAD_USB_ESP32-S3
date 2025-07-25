@@ -2,7 +2,8 @@
 
 # Sơ đồ BAD USB S3 SUPER MINI
 
-<img width="426" height="259" alt="s3 supermini badusbmsc" src="https://github.com/user-attachments/assets/01114015-98a6-47aa-bbc9-3f6ab912de11" />
+<img width="762" height="457" alt="image" src="https://github.com/user-attachments/assets/06cb70d3-211a-40cd-9331-7b23fa796513" />
+
 
 # Sơ đồ BAD USB S3 DEV KIT
 
